@@ -1,0 +1,21 @@
+[project]
+name = "immersive-cre-mcp"
+version = "0.1.0"
+description = "MCP server for Immersive Labs Cyber Ranges"
+readme = "README.md"
+authors = [
+    { name = "kevthehermit", email = "kevthehermit@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.28.1",
+    "mcp[cli]>=2.3",
+    "pydantic-settings>=2.15.0",
+]
+
+[project.scripts]
+immersive-cre-mcp = "immersive_cre_mcp.server:main"
+
+[build-system]
+requires = ["uv_build>=0.9.25,<0.10.0"]
+build-backend = "uv_build"
