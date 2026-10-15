@@ -47,9 +47,12 @@ Settings are read from environment variables, so set them in your MCP client's c
 | Variable | Default | |
 |---|---|---|
 | `IMMERSIVE_CRE_USERNAME` / `IMMERSIVE_CRE_PASSWORD` | – | Immersive Labs platform login (no API tokens exist) |
-| `IMMERSIVE_CRE_BASE_URL` | `https://api4.eu.snaplabs.io` | Ranges API host |
-| `IMMERSIVE_CRE_DASHBOARD_URL` | `https://dashboard.immersivelabs.eu.snaplabs.io` | Used for the OAuth state/referrer |
-| `IMMERSIVE_CRE_TOKEN_CACHE` | `~/.cache/immersive-cre-mcp/token` | Session cookie cache (mode 0600); empty = memory only |
+| `IMMERSIVE_CRE_REGION` | `eu` | `eu` (immersivelabs.online) or `us` (us.immersivelabs.com); picks every host below |
+| `IMMERSIVE_CRE_BASE_URL` | region's (`https://api4.eu.snaplabs.io` / `https://api4.snaplabs.io`) | Ranges API host |
+| `IMMERSIVE_CRE_DASHBOARD_URL` | region's (`https://dashboard.immersivelabs.eu.snaplabs.io` / `https://dashboard.immersivelabs.snaplabs.io`) | Used for the OAuth state/referrer |
+| `IMMERSIVE_CRE_IL_URL` / `IMMERSIVE_CRE_IL_API_URL` / `IMMERSIVE_CRE_HYDRA_URL` | region's | Immersive Labs sign-in hosts |
+| `IMMERSIVE_CRE_HYDRA_CLIENT_ID` | region's | Fallback only - the OAuth URL normally comes from the ranges API |
+| `IMMERSIVE_CRE_TOKEN_CACHE` | `~/.cache/immersive-cre-mcp/token` | Session cookie cache (mode 0600; `-us` suffix for the US region); empty = memory only |
 | `IMMERSIVE_CRE_READ_ONLY` | `false` | Only expose read tools |
 | `IMMERSIVE_CRE_ENABLE_RAW` | `true` | Expose `raw_request` for endpoints without a tool |
 

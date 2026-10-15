@@ -6,10 +6,12 @@ own API layer is two helpers, `GET /ranges/<path>` and `POST /ranges/<path>`
 with a JSON body; this client mirrors that, plus auth and S3 uploads.
 
 Auth: no API tokens. We walk the Immersive Labs platform login through the
-ORY Hydra OAuth flow, which ends with a `token` cookie on the CRE API host:
+ORY Hydra OAuth flow, which ends with a `token` cookie on the CRE API host.
+Every host is regional (EU/US) - see config.REGIONS:
 
-  1. POST  api.immersivelabs.online/v1/immersive_auth/sessions   (email+password)
-  2. GET   hydra/oauth2/auth?...            -> /signin?login_challenge=<X>
+  1. POST  <IL API>/v1/immersive_auth/sessions   (email+password)
+  2. GET   <hydra>/oauth2/auth?...  (the ranges API's 401 `authorizationUrl`)
+                                     -> /signin?login_challenge=<X>
   3. POST  IL graphql OIDCAcceptLogin(X)    -> redirectTo (hydra ?login_verifier=)
   4. GET   redirectTo                        -> /oidc/consent?consent_challenge=<Y>
   5. POST  IL graphql OIDCAcceptConsent(Y)  -> redirectTo (hydra ?consent_verifier=)
@@ -34,11 +36,6 @@ from .config import settings as default_settings
 
 log = logging.getLogger("immersive_cre_mcp.client")
 
-IL_API = "https://api.immersivelabs.online"
-IL_DASHBOARD = "https://immersivelabs.online"
-HYDRA = "https://hydra.immersivelabs.online"
-# Hydra OAuth client id the CRE dashboard uses.
-HYDRA_CLIENT_ID = "8e5ca831-793c-4405-9228-f2a19e3182a8"
 GRAPHQL_API_VERSION = "2026-04-27"
 # The IL edge/WAF bounces unrecognised UAs to a bot page that breaks the OAuth chain.
 BROWSER_UA = (
@@ -56,6 +53,8 @@ class CreClient:
         self.settings = settings
         self.base = settings.immersive_cre_base_url.rstrip("/")
         self.dashboard = settings.immersive_cre_dashboard_url.rstrip("/")
+        self.il = settings.immersive_cre_il_url.rstrip("/")
+        self.il_api = settings.immersive_cre_il_api_url.rstrip("/")
         self._token: str | None = None
         self._login_lock = asyncio.Lock()
         self._http = httpx.AsyncClient(
@@ -147,33 +146,67 @@ class CreClient:
             headers={"User-Agent": BROWSER_UA, "Accept": "application/json, text/plain, */*"},
         ) as http:
             r = await http.post(
-                f"{IL_API}/v1/immersive_auth/sessions",
+                f"{self.il_api}/v1/immersive_auth/sessions",
                 json={"account": {"email": s.immersive_cre_username, "password": s.immersive_cre_password}},
-                headers={"Origin": IL_DASHBOARD, "Referer": f"{IL_DASHBOARD}/signin"},
+                headers={"Origin": self.il, "Referer": f"{self.il}/signin"},
             )
             if r.status_code >= 400:
-                raise CreError(f"IL sign-in failed: {r.status_code} {r.text[:200]}")
+                raise CreError(f"IL sign-in failed ({self.il_api}): {r.status_code} {r.text[:200]}")
 
-            callback = f"{self.base}/ranges/authorizationChallengeCallback"
-            r = await http.get(
-                f"{HYDRA}/oauth2/auth?client_id={HYDRA_CLIENT_ID}&scope=offline_access%20openid"
-                f"&response_type=code&redirect_uri={callback}&state={self.dashboard}/labs&max_age=43200",
-                headers={"Referer": f"{self.dashboard}/"},
-            )
+            r = await http.get(await self._authorization_url(http), headers={"Referer": f"{self.dashboard}/"})
             login_challenge = _query_param(r, "login_challenge")
-            redirect = await _accept_challenge(http, "OIDCAcceptLogin", "oidcAcceptLoginRequest", "loginChallenge", login_challenge)
-            r = await http.get(redirect, headers={"Referer": f"{IL_DASHBOARD}/"})
+            redirect = await self._accept_challenge(http, "OIDCAcceptLogin", "oidcAcceptLoginRequest", "loginChallenge", login_challenge)
+            r = await http.get(redirect, headers={"Referer": f"{self.il}/"})
             consent_challenge = _query_param(r, "consent_challenge")
-            redirect = await _accept_challenge(http, "OIDCAcceptConsent", "oidcAcceptConsentRequest", "consentChallenge", consent_challenge)
-            r = await http.get(redirect, headers={"Referer": f"{IL_DASHBOARD}/"})
+            redirect = await self._accept_challenge(http, "OIDCAcceptConsent", "oidcAcceptConsentRequest", "consentChallenge", consent_challenge)
+            r = await http.get(redirect, headers={"Referer": f"{self.il}/"})
             token = http.cookies.get("token")
             if not token:
                 raise CreError(f"OAuth chain finished without a CRE token (landed on {r.url})")
             return token
 
+    async def _authorization_url(self, http: httpx.AsyncClient) -> str:
+        """The Hydra URL that starts the OAuth flow. Like the dashboard, take it from the
+        ranges API's 401 (it knows its own client id and callback); else build it."""
+        r = await http.get(
+            f"{self.base}/ranges/staticuserinfo",
+            headers={"X-Referrer": f"{self.dashboard}/labs"}, follow_redirects=False,
+        )
+        try:
+            url = (r.json() or {}).get("authorizationUrl") if r.status_code == 401 else None
+        except ValueError:
+            url = None
+        if url:
+            return url
+        s = self.settings
+        if not s.immersive_cre_hydra_client_id:
+            raise CreError(
+                f"{self.base} didn't return an authorizationUrl ({r.status_code}) and no "
+                "IMMERSIVE_CRE_HYDRA_CLIENT_ID is set for this region"
+            )
+        callback = f"{self.base}/ranges/authorizationChallengeCallback"
+        return (
+            f"{s.immersive_cre_hydra_url.rstrip('/')}/oauth2/auth?client_id={s.immersive_cre_hydra_client_id}"
+            f"&scope=offline_access%20openid&response_type=code&redirect_uri={callback}"
+            f"&state={self.dashboard}/labs&max_age=43200"
+        )
+
+    async def _accept_challenge(self, http: httpx.AsyncClient, op: str, field_name: str, arg: str, challenge: str) -> str:
+        query = f"mutation {op}($challenge: String!) {{ {field_name}({arg}: $challenge) {{ redirectTo }} }}"
+        r = await http.post(
+            f"{self.il_api}/v1/graphql?r={op}&api_version={GRAPHQL_API_VERSION}",
+            json={"operationName": op, "variables": {"challenge": challenge}, "query": query},
+            headers={"Origin": self.il, "Referer": f"{self.il}/"},
+        )
+        if r.status_code >= 400:
+            raise CreError(f"{op} -> {r.status_code} {r.text[:200]}")
+        redirect = ((r.json().get("data") or {}).get(field_name) or {}).get("redirectTo")
+        if not redirect:
+            raise CreError(f"{op} response missing redirectTo: {r.text[:200]}")
+        return redirect
+
     def _cache_path(self) -> Path | None:
-        p = self.settings.immersive_cre_token_cache
-        return Path(p).expanduser() if p else None
+        return self.settings.token_cache_path
 
     def _load_cached_token(self) -> str | None:
         path = self._cache_path()
@@ -204,17 +237,3 @@ def _query_param(resp: httpx.Response, name: str) -> str:
         raise CreError(f"hydra didn't return a {name}; landed on {resp.url}")
     return value
 
-
-async def _accept_challenge(http: httpx.AsyncClient, op: str, field_name: str, arg: str, challenge: str) -> str:
-    query = f"mutation {op}($challenge: String!) {{ {field_name}({arg}: $challenge) {{ redirectTo }} }}"
-    r = await http.post(
-        f"{IL_API}/v1/graphql?r={op}&api_version={GRAPHQL_API_VERSION}",
-        json={"operationName": op, "variables": {"challenge": challenge}, "query": query},
-        headers={"Origin": IL_DASHBOARD, "Referer": f"{IL_DASHBOARD}/"},
-    )
-    if r.status_code >= 400:
-        raise CreError(f"{op} -> {r.status_code} {r.text[:200]}")
-    redirect = ((r.json().get("data") or {}).get(field_name) or {}).get("redirectTo")
-    if not redirect:
-        raise CreError(f"{op} response missing redirectTo: {r.text[:200]}")
-    return redirect
