@@ -6,6 +6,7 @@ returns a pre-signed S3 POST; the file is then posted straight to S3.
 from __future__ import annotations
 
 import asyncio
+import re
 from pathlib import Path
 from typing import Any, Literal
 
@@ -22,6 +23,60 @@ def _target(scenario_id: str | None, vpc_id: str | None, event_id: str | None, t
     if not any(t.values()):
         raise CreError("pass one of scenario_id, vpc_id, event_id or template_id")
     return t
+
+
+_FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
+_REF_DEF = re.compile(
+    r"^ {0,3}\[((?:[^\[\]\\]|\\.)+)\]:[ \t]*(<[^<>\n]*>|\S+)"
+    r"""(?:[ \t]+("[^"\n]*"|'[^'\n]*'|\([^()\n]*\)))?[ \t]*$"""
+)
+# Inline code spans pass through untouched; otherwise [text][label], [text][] or [label].
+_REF_USE = re.compile(r"(`+)[^`]*?\1|(!?)\[((?:[^\[\]\\]|\\.)*)\](?:\[((?:[^\[\]\\]|\\.)*)\]|(?![\[(:]))")
+
+
+def _ref_label(label: str) -> str:
+    return " ".join(label.split()).casefold()
+
+
+def _inline_references(text: str) -> str:
+    """Rewrite reference-style links/images to inline form. The dashboard's Toast UI editor runs
+    with referenceDefinition off, so `![a][img1]` + `[img1]: <data:...>` renders the definition
+    as raw text (e.g. a wall of base64, as Google Docs markdown exports produce)."""
+    lines = text.split("\n")
+    defs: dict[str, str] = {}
+    keep: list[tuple[str, bool]] = []  # (line, inside fenced code)
+    fence = None
+    for line in lines:
+        m = _FENCE.match(line)
+        if fence:
+            if m and m.group(1)[0] == fence[0] and len(m.group(1)) >= len(fence):
+                fence = None
+            keep.append((line, True))
+            continue
+        if m:
+            fence = m.group(1)
+            keep.append((line, True))
+            continue
+        d = _REF_DEF.match(line)
+        if d:
+            dest = d.group(2)
+            dest = dest[1:-1] if dest.startswith("<") else dest
+            if not dest or re.search(r"[\s()]", dest):
+                dest = f"<{dest}>"
+            defs.setdefault(_ref_label(d.group(1)), dest + (f" {d.group(3)}" if d.group(3) else ""))
+            continue
+        keep.append((line, False))
+    if not defs:
+        return text
+
+    def sub(m: re.Match[str]) -> str:
+        if m.group(1):
+            return m.group(0)
+        bang, inner, label = m.group(2), m.group(3), m.group(4)
+        target = defs.get(_ref_label(label or inner))
+        return f"{bang}[{inner}]({target})" if target else m.group(0)
+
+    return "\n".join(line if code else _REF_USE.sub(sub, line) for line, code in keep)
 
 
 async def _details(c: CreClient, t: dict[str, Any]) -> dict[str, Any]:
@@ -67,10 +122,13 @@ async def set_markdown(
 ) -> dict[str, Any]:
     """Write the participant briefing (kind=student) or admin walkthrough (kind=admin), replacing
     the current text. Provide the content inline (markdown) or from a local file (file_path).
+    Reference-style links/images are rewritten inline, as the dashboard can't render them.
     An admin walkthrough is created first if none exists."""
     if (markdown is None) == (file_path is None):
         raise CreError("provide exactly one of markdown or file_path")
-    content = markdown.encode() if markdown is not None else read_local_file(file_path)  # type: ignore[arg-type]
+    if markdown is None:
+        markdown = read_local_file(file_path).decode("utf-8")  # type: ignore[arg-type]
+    content = _inline_references(markdown).encode()
     c = client(ctx)
     t = _target(scenario_id, vpc_id, event_id, template_id)
     if kind == "admin":
