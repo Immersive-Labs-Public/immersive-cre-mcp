@@ -1,5 +1,8 @@
 # immersive-cre-mcp
 
+[![CI](https://github.com/immersive-labs-innovation/immersive-cre-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/immersive-labs-innovation/immersive-cre-mcp/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 MCP server for **Immersive Labs Cyber Ranges** (CRE), built for **range authors**.
 It covers the whole dashboard: scenarios, flags (with answers), briefing and walkthrough markdown,
 documents, templates, labs, systems, networking, snapshots, VPN, events and users.
@@ -162,7 +165,20 @@ claude mcp add immersive-cre -- uv run --project /path/to/immersive-cre-mcp imme
 To try tools interactively, use the MCP Inspector: `npx @modelcontextprotocol/inspector uv run immersive-cre-mcp`.
 Set `LOG_LEVEL=DEBUG` for more logging.
 
-## Test status
+## Checks
+
+CI runs these on every push and pull request; run them locally before opening a PR:
+
+```bash
+uv run ruff check .   # lint
+uv run mypy           # type check
+uv run pytest         # unit tests (add --cov for coverage)
+```
+
+The unit tests mock all HTTP, so they need no credentials and never reach the live API. They
+ignore your `.env`, and they don't touch the token cache.
+
+## Live API test status
 
 These were exercised against the test account over MCP stdio, using a throwaway scenario that was
 deleted afterwards: all read tools, scenario create/update/delete, every flag operation,
@@ -182,4 +198,9 @@ src/immersive_cre_mcp/
   server.py      entry point (immersive-cre-mcp)
   tools/         one module per area (scenarios, flags, content, templates, labs, systems, events, account)
 docs/API.md      endpoint reference (as observed from the dashboard)
+tests/           unit tests (HTTP mocked with respx)
 ```
+
+## License
+
+[MIT](LICENSE)

@@ -157,7 +157,7 @@ async def reorder_flags(
     c = client(ctx)
     kind, oid = _owner(scenario_id, event_id)
     flags = await _load(c, kind, oid)
-    by_id = {f.get("FlagId"): f for f in flags}
+    by_id = {str(f.get("FlagId")): f for f in flags}
     if sorted(flag_ids) != sorted(by_id):
         raise CreError(f"flag_ids must be a permutation of the {len(by_id)} existing FlagIds")
     return await _save(c, kind, oid, [by_id[i] for i in flag_ids])

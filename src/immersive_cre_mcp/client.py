@@ -105,7 +105,7 @@ class CreClient:
 
     async def _send(self, method: str, path: str, body: dict[str, Any] | None, token: str) -> httpx.Response:
         return await self._http.request(
-            method, path, json=body if method.upper() != "GET" else None, cookies={"token": token},
+            method, path, json=body if method.upper() != "GET" else None, headers={"Cookie": f"token={token}"},
         )
 
     # S3 helpers ----------------------------------------------------------------------

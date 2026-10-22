@@ -88,7 +88,7 @@ async def manage_system_interface(
     if action == "add":
         if not subnet_id:
             raise CreError("subnet_id is required to add an interface")
-        body = {"VpcId": vpc_id, "InstanceId": instance_id, "SubnetId": subnet_id, "IpAddress": ip_address}
+        body: dict[str, Any] = {"VpcId": vpc_id, "InstanceId": instance_id, "SubnetId": subnet_id, "IpAddress": ip_address}
     else:
         body = {"VpcId": vpc_id, "InstanceId": instance_id, "Delete": True}
     return await client(ctx).post("lab/systems/network", body)

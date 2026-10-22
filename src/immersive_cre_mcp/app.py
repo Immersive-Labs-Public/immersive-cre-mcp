@@ -6,7 +6,7 @@ import os
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Literal, TypeVar
+from typing import Any, Literal, TypeVar, cast
 
 from mcp.server.mcpserver import Context, MCPServer
 from mcp.types import ToolAnnotations
@@ -50,9 +50,9 @@ async def lifespan(_: MCPServer) -> AsyncIterator[CreClient]:
 mcp = MCPServer("immersive-cre", instructions=INSTRUCTIONS, lifespan=lifespan)
 
 _ANNOTATIONS = {
-    "read": ToolAnnotations(readOnlyHint=True, openWorldHint=True),
-    "write": ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True),
-    "destructive": ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True),
+    "read": ToolAnnotations(read_only_hint=True, open_world_hint=True),
+    "write": ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=True),
+    "destructive": ToolAnnotations(read_only_hint=False, destructive_hint=True, open_world_hint=True),
 }
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -67,7 +67,7 @@ def tool(kind: Literal["read", "write", "destructive"]) -> Callable[[F], F]:
 
 
 def client(ctx: Context) -> CreClient:
-    return ctx.request_context.lifespan_context
+    return cast(CreClient, ctx.request_context.lifespan_context)
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────

@@ -199,7 +199,7 @@ async def manage_lab_users(
                                          "updateExistingUserPermissions": True})
     else:
         for uid in user_ids:
-            body = {"vpcId": vpc_id, "userId": uid}
+            body: dict[str, Any] = {"vpcId": vpc_id, "userId": uid}
             body |= {"delete": True} if action == "remove" else {"permission": permission}
             await c.post("lab/permissions", body)
     return (await c.post("lab/permissions", {"vpcId": vpc_id})).get("users") or []
