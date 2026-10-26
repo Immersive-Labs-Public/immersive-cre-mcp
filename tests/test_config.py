@@ -30,6 +30,13 @@ def test_unknown_region_rejected() -> None:
         make(immersive_cre_region="apac")
 
 
+def test_auth_mode_defaults_to_auto_and_is_validated() -> None:
+    assert make().immersive_cre_auth == "auto"
+    assert make(immersive_cre_auth="cognito").immersive_cre_auth == "cognito"
+    with pytest.raises(ValidationError):
+        make(immersive_cre_auth="sso")
+
+
 def test_configured_needs_username_and_password() -> None:
     assert make(immersive_cre_username="a", immersive_cre_password="b").configured
     assert not make(immersive_cre_username="a", immersive_cre_password="").configured

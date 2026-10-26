@@ -5,9 +5,16 @@ use it), but it isn't formally documented or versioned - see docs/API.md. The da
 own API layer is two helpers, `GET /ranges/<path>` and `POST /ranges/<path>`
 with a JSON body; this client mirrors that, plus auth and S3 uploads.
 
-Auth: no API tokens. We walk the Immersive Labs platform login through the
-ORY Hydra OAuth flow, which ends with a `token` cookie on the CRE API host.
-Every host is regional (EU/US) - see config.REGIONS:
+Auth: no API tokens, and two kinds of account (IMMERSIVE_CRE_AUTH; `auto` tries
+platform, then cognito if the platform rejects the credentials):
+
+- cognito: standalone CRE accounts (e.g. support) sign in to an AWS Cognito pool
+  (see cognito.py) and send the ID token as `Authorization` to <cognito API>/main/<path>,
+  the same API under another host and prefix.
+- platform: Immersive Labs users. We walk the platform login through the
+  ORY Hydra OAuth flow, which ends with a `token` cookie on the CRE API host.
+
+Every host is regional (EU/US) - see config.REGIONS. The platform chain:
 
   1. POST  <IL API>/v1/immersive_auth/sessions   (email+password)
   2. GET   <hydra>/oauth2/auth?...  (the ranges API's 401 `authorizationUrl`)
@@ -17,11 +24,13 @@ Every host is regional (EU/US) - see config.REGIONS:
   5. POST  IL graphql OIDCAcceptConsent(Y)  -> redirectTo (hydra ?consent_verifier=)
   6. GET   redirectTo -> CRE authorizationChallengeCallback?code=... (sets `token`)
 
-The token is cached (memory + optional file) and re-minted on 401/403.
+The token is cached (memory + optional file, tagged with the account and mode)
+and re-minted on 401/403.
 """
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 from pathlib import Path
@@ -31,6 +40,7 @@ from urllib.parse import parse_qs, urlparse
 import httpx
 from mcp.server.mcpserver.exceptions import ToolError
 
+from . import cognito
 from .config import Settings
 from .config import settings as default_settings
 
@@ -48,23 +58,25 @@ class CreError(ToolError):
     """A ranges-API failure. Subclasses ToolError so MCP relays the message to the model."""
 
 
+class SignInRejected(CreError):
+    """The Immersive Labs platform turned the credentials down (in auto mode, try Cognito)."""
+
+
 class CreClient:
     def __init__(self, settings: Settings = default_settings) -> None:
         self.settings = settings
         self.base = settings.immersive_cre_base_url.rstrip("/")
+        self.cognito_api = settings.immersive_cre_cognito_api_url.rstrip("/")
         self.dashboard = settings.immersive_cre_dashboard_url.rstrip("/")
         self.il = settings.immersive_cre_il_url.rstrip("/")
         self.il_api = settings.immersive_cre_il_api_url.rstrip("/")
         self._token: str | None = None
+        # "platform" or "cognito"; None until an auto-mode login (or the cache) settles it.
+        self._mode: str | None = None if settings.immersive_cre_auth == "auto" else settings.immersive_cre_auth
         self._login_lock = asyncio.Lock()
         self._http = httpx.AsyncClient(
-            base_url=f"{self.base}/ranges/",
             timeout=60.0,
-            headers={
-                "User-Agent": BROWSER_UA,
-                "Accept": "application/json, text/plain, */*",
-                "X-Referrer": f"{self.dashboard}/labs",
-            },
+            headers={"User-Agent": BROWSER_UA, "Accept": "application/json, text/plain, */*"},
         )
 
     async def aclose(self) -> None:
@@ -85,14 +97,14 @@ class CreClient:
         With check=True, a `"result": "error"`-style body raises CreError."""
         if not self.settings.configured:
             raise CreError("CRE is not configured (set IMMERSIVE_CRE_USERNAME / IMMERSIVE_CRE_PASSWORD)")
-        path = path.lstrip("/").removeprefix("ranges/")
+        path = path.lstrip("/").removeprefix("ranges/").removeprefix("main/")
         token = self._token or self._load_cached_token() or await self._login()
         resp = await self._send(method, path, body, token)
         if resp.status_code in (401, 403):
             log.info("cre %s on %s %s - re-logging in", resp.status_code, method, path)
             resp = await self._send(method, path, body, await self._login(stale=token))
         if resp.status_code >= 400:
-            raise CreError(f"{method} /ranges/{path} -> {resp.status_code}: {resp.text[:500]}")
+            raise CreError(f"{method} /{self._prefix}/{path} -> {resp.status_code}: {resp.text[:500]}")
         try:
             data = resp.json()
         except ValueError:
@@ -103,9 +115,18 @@ class CreClient:
             raise CreError(f"/ranges/{path}: {str(data.get('message') or data)[:500]}")
         return data
 
+    @property
+    def _prefix(self) -> str:
+        return "main" if self._mode == "cognito" else "ranges"
+
     async def _send(self, method: str, path: str, body: dict[str, Any] | None, token: str) -> httpx.Response:
+        if self._mode == "cognito":
+            url, headers = f"{self.cognito_api}/main/{path}", {"Authorization": token}
+        else:
+            url = f"{self.base}/ranges/{path}"
+            headers = {"Cookie": f"token={token}", "X-Referrer": f"{self.dashboard}/labs"}
         return await self._http.request(
-            method, path, json=body if method.upper() != "GET" else None, headers={"Cookie": f"token={token}"},
+            method, url, json=body if method.upper() != "GET" else None, headers=headers,
         )
 
     # S3 helpers ----------------------------------------------------------------------
@@ -132,11 +153,37 @@ class CreClient:
             # Another task may have refreshed the token while we waited.
             if self._token and self._token != stale:
                 return self._token
-            token = await self._oauth_login()
+            self._mode, token = await self._sign_in()
             self._token = token
             self._save_cached_token(token)
-            log.info("cre login OK")
+            log.info("cre login OK (%s)", self._mode)
             return token
+
+    async def _sign_in(self) -> tuple[str, str]:
+        """(mode, token). Once a mode is known (configured, cached or found) stick to it."""
+        if self._mode == "cognito":
+            return "cognito", await self._cognito_login()
+        try:
+            return "platform", await self._oauth_login()
+        except SignInRejected as platform_exc:
+            if self._mode == "platform":
+                raise
+            log.info("platform sign-in rejected, trying Cognito: %s", platform_exc)
+            try:
+                return "cognito", await self._cognito_login()
+            except CreError as cognito_exc:
+                raise CreError(f"Sign-in failed for both account types. {platform_exc} / {cognito_exc}") from cognito_exc
+
+    async def _cognito_login(self) -> str:
+        s = self.settings
+        async with httpx.AsyncClient(timeout=30.0, headers={"User-Agent": BROWSER_UA}) as http:
+            try:
+                return await cognito.sign_in(
+                    http, s.immersive_cre_cognito_user_pool_id, s.immersive_cre_cognito_client_id,
+                    s.immersive_cre_username, s.immersive_cre_password,
+                )
+            except cognito.CognitoError as exc:
+                raise CreError(f"CRE (Cognito) sign-in failed: {exc}") from exc
 
     async def _oauth_login(self) -> str:
         """Walk IL sign-in -> hydra -> CRE callback; return the token cookie."""
@@ -150,7 +197,9 @@ class CreClient:
                 json={"account": {"email": s.immersive_cre_username, "password": s.immersive_cre_password}},
                 headers={"Origin": self.il, "Referer": f"{self.il}/signin"},
             )
-            if r.status_code >= 400:
+            if 400 <= r.status_code < 500:
+                raise SignInRejected(f"IL sign-in failed ({self.il_api}): {r.status_code} {r.text[:200]}")
+            if r.status_code >= 500:
                 raise CreError(f"IL sign-in failed ({self.il_api}): {r.status_code} {r.text[:200]}")
 
             r = await http.get(await self._authorization_url(http), headers={"Referer": f"{self.dashboard}/"})
@@ -209,13 +258,21 @@ class CreClient:
         return self.settings.token_cache_path
 
     def _load_cached_token(self) -> str | None:
+        """The cached token, if it belongs to this account (and configured mode).
+        Anything else - another user, the old bare-token format - is ignored and re-minted."""
         path = self._cache_path()
         if not path or not path.exists():
             return None
         try:
-            self._token = path.read_text().strip() or None
-        except OSError:
+            cached = json.loads(path.read_text())
+        except (OSError, ValueError):
             return None
+        if not isinstance(cached, dict) or cached.get("user") != self.settings.immersive_cre_username:
+            return None
+        mode, token = cached.get("mode"), cached.get("token")
+        if mode not in ("platform", "cognito") or not token or (self._mode and mode != self._mode):
+            return None
+        self._mode, self._token = mode, str(token)
         return self._token
 
     def _save_cached_token(self, token: str) -> None:
@@ -226,7 +283,7 @@ class CreClient:
             path.parent.mkdir(parents=True, exist_ok=True)
             fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
             with os.fdopen(fd, "w") as f:
-                f.write(token)
+                json.dump({"user": self.settings.immersive_cre_username, "mode": self._mode, "token": token}, f)
         except OSError as exc:
             log.warning("could not cache token at %s: %s", path, exc)
 

@@ -1,4 +1,7 @@
-.env
+# Credentials: any env file except the example.
+.env*
+*.env
+!.env.example
 .venv/
 __pycache__/
 *.pyc

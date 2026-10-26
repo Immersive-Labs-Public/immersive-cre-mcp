@@ -12,6 +12,8 @@ _PROJECT_ENV = Path(__file__).resolve().parents[2] / ".env"
 
 # Per-region hosts. CRE (ranges API + dashboard) and the Immersive Labs platform that
 # signs you in (IL web app, its API, and the ORY Hydra OAuth server) are both regional.
+# Accounts that aren't Immersive Labs platform users (e.g. support accounts) sign in to the
+# standalone CRE dashboard instead: an AWS Cognito user pool, and the same API under /main.
 REGIONS: dict[str, dict[str, str]] = {
     "eu": {
         "base_url": "https://api4.eu.snaplabs.io",
@@ -22,6 +24,9 @@ REGIONS: dict[str, dict[str, str]] = {
         # Hydra OAuth client the CRE dashboard uses; only a fallback, since the
         # ranges API hands us the full authorization URL on an unauthenticated call.
         "hydra_client_id": "8e5ca831-793c-4405-9228-f2a19e3182a8",
+        "cognito_api_url": "https://api.eu.snaplabs.io",
+        "cognito_user_pool_id": "eu-west-1_uVrFeROlb",
+        "cognito_client_id": "78qh9j1upcfe3iovosrnoqu3m8",
     },
     "us": {
         "base_url": "https://api4.snaplabs.io",
@@ -30,6 +35,9 @@ REGIONS: dict[str, dict[str, str]] = {
         "il_api_url": "https://api.us.immersivelabs.com",
         "hydra_url": "https://hydra.us.immersivelabs.com",
         "hydra_client_id": "26ef12e7-ae8e-42dc-9e0d-3b24cd5ab2dc",
+        "cognito_api_url": "https://api2.snaplabs.io",
+        "cognito_user_pool_id": "us-east-1_VxNOQoSLe",
+        "cognito_client_id": "7qa62a73bfon6haph3ok6mca58",
     },
 }
 
@@ -45,10 +53,16 @@ class Settings(BaseSettings):
     immersive_cre_il_api_url: str = ""
     immersive_cre_hydra_url: str = ""
     immersive_cre_hydra_client_id: str = ""
+    immersive_cre_cognito_api_url: str = ""
+    immersive_cre_cognito_user_pool_id: str = ""
+    immersive_cre_cognito_client_id: str = ""
+    # platform = Immersive Labs login (Hydra OAuth); cognito = standalone CRE account;
+    # auto = try platform, fall back to cognito if the platform rejects the credentials.
+    immersive_cre_auth: Literal["auto", "platform", "cognito"] = "auto"
     immersive_cre_username: str = ""
     immersive_cre_password: str = ""
 
-    # Where the CRE `token` cookie is cached between server restarts.
+    # Where the CRE session token is cached between server restarts.
     # Empty string disables the on-disk cache (token kept in memory only).
     immersive_cre_token_cache: str = str(Path.home() / ".cache" / "immersive-cre-mcp" / "token")
     # Only register read-only tools (no launches, edits or deletes).

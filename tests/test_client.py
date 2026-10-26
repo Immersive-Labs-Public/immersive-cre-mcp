@@ -12,10 +12,13 @@ import respx
 from immersive_cre_mcp.client import CreClient, CreError
 from immersive_cre_mcp.config import Settings
 
+from .test_cognito import IDP, FakeCognito
+
 API = "https://api4.eu.snaplabs.io/ranges"
 IL = "https://immersivelabs.online"
 IL_API = "https://api.immersivelabs.online"
 HYDRA = "https://hydra.immersivelabs.online"
+MAIN = "https://api.eu.snaplabs.io/main"
 
 
 def make_settings(**kw: object) -> Settings:
@@ -117,14 +120,14 @@ async def test_relogin_on_401(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
         await c.aclose()
     assert "token=fresh" in route.calls.last.request.headers["cookie"]
     assert c._token == "fresh"
-    assert cache.read_text() == "fresh"
+    assert json.loads(cache.read_text()) == {"user": "user@example.com", "mode": "platform", "token": "fresh"}
     assert stat.S_IMODE(cache.stat().st_mode) == 0o600
 
 
 @respx.mock
 async def test_uses_cached_token_from_disk(tmp_path: Path) -> None:
     cache = tmp_path / "token"
-    cache.write_text("from-disk\n")
+    cache.write_text(json.dumps({"user": "user@example.com", "mode": "platform", "token": "from-disk"}))
     c = CreClient(make_settings(immersive_cre_token_cache=str(cache)))
     route = respx.get(f"{API}/labs").respond(json={})
     try:
@@ -132,6 +135,38 @@ async def test_uses_cached_token_from_disk(tmp_path: Path) -> None:
     finally:
         await c.aclose()
     assert "token=from-disk" in route.calls.last.request.headers["cookie"]
+
+
+@respx.mock
+async def test_cached_cognito_token_goes_to_main_api(tmp_path: Path) -> None:
+    cache = tmp_path / "token"
+    cache.write_text(json.dumps({"user": "user@example.com", "mode": "cognito", "token": "jwt"}))
+    c = CreClient(make_settings(immersive_cre_token_cache=str(cache)))
+    route = respx.get(f"{MAIN}/labs").respond(json={})
+    try:
+        await c.get("labs")
+    finally:
+        await c.aclose()
+    assert route.calls.last.request.headers["authorization"] == "jwt"
+
+
+@pytest.mark.parametrize("content", [
+    "bare-legacy-token",
+    json.dumps({"user": "someone-else@example.com", "mode": "platform", "token": "theirs"}),
+    json.dumps({"user": "user@example.com", "mode": "platform", "token": ""}),
+])
+def test_cache_for_another_account_is_ignored(tmp_path: Path, content: str) -> None:
+    cache = tmp_path / "token"
+    cache.write_text(content)
+    c = CreClient(make_settings(immersive_cre_token_cache=str(cache)))
+    assert c._load_cached_token() is None
+
+
+def test_cache_from_other_mode_is_ignored_when_mode_is_pinned(tmp_path: Path) -> None:
+    cache = tmp_path / "token"
+    cache.write_text(json.dumps({"user": "user@example.com", "mode": "platform", "token": "t"}))
+    c = CreClient(make_settings(immersive_cre_token_cache=str(cache), immersive_cre_auth="cognito"))
+    assert c._load_cached_token() is None
 
 
 # ── OAuth login chain ────────────────────────────────────────────────────────
@@ -189,12 +224,90 @@ async def test_full_login_chain_mints_token() -> None:
 @respx.mock
 async def test_login_failure_surfaces_status() -> None:
     respx.post(f"{IL_API}/v1/immersive_auth/sessions").respond(401, text="bad creds")
-    c = CreClient(make_settings())
+    c = CreClient(make_settings(immersive_cre_auth="platform"))
     try:
         with pytest.raises(CreError, match=r"IL sign-in failed.*401"):
             await c.get("labs")
     finally:
         await c.aclose()
+
+
+# ── Cognito (standalone CRE accounts) ────────────────────────────────────────
+def cognito_settings(**kw: object) -> Settings:
+    return make_settings(immersive_cre_username="support@example.com", **kw)
+
+
+@respx.mock
+async def test_auto_falls_back_to_cognito_when_platform_rejects() -> None:
+    session = respx.post(f"{IL_API}/v1/immersive_auth/sessions").respond(422, json={"session": {}})
+    respx.post(IDP).mock(side_effect=FakeCognito(password="pw"))
+    route = respx.post(f"{MAIN}/users").respond(json={"result": "success", "users": []})
+    c = CreClient(cognito_settings())
+    try:
+        assert await c.post("users", {"hideManagers": False}) == {"result": "success", "users": []}
+    finally:
+        await c.aclose()
+    assert session.called
+    assert c._mode == "cognito"
+    req = route.calls.last.request
+    assert req.headers["authorization"] == "id-token"
+    assert "cookie" not in req.headers and "x-referrer" not in req.headers
+
+
+@respx.mock
+async def test_cognito_mode_skips_platform_and_relogs_in_on_401() -> None:
+    session = respx.post(f"{IL_API}/v1/immersive_auth/sessions").respond(500)
+    server = FakeCognito()
+    respx.post(IDP).mock(side_effect=server)
+    route = respx.get(f"{MAIN}/labs").mock(side_effect=[
+        httpx.Response(401, json={"message": "The incoming token has expired"}), httpx.Response(200, json={"labs": []}),
+    ])
+    c = CreClient(cognito_settings(immersive_cre_auth="cognito"))
+    c._token = "expired"
+    try:
+        assert await c.get("labs") == {"labs": []}
+    finally:
+        await c.aclose()
+    assert not session.called
+    assert server.targets == ["InitiateAuth", "RespondToAuthChallenge"]
+    assert route.calls.last.request.headers["authorization"] == "id-token"
+
+
+@respx.mock
+async def test_cognito_http_error_names_main_path() -> None:
+    respx.get(f"{MAIN}/labs").respond(500, text="boom")
+    c = CreClient(cognito_settings(immersive_cre_auth="cognito"))
+    c._token = "jwt"
+    try:
+        with pytest.raises(CreError, match=r"GET /main/labs -> 500: boom"):
+            await c.get("labs")
+    finally:
+        await c.aclose()
+
+
+@respx.mock
+async def test_auto_reports_both_failures() -> None:
+    respx.post(f"{IL_API}/v1/immersive_auth/sessions").respond(422, text="issue signing you in")
+    respx.post(IDP).mock(side_effect=FakeCognito(password="other"))
+    c = CreClient(cognito_settings())
+    try:
+        with pytest.raises(CreError, match=r"both account types.*422.*Incorrect username or password"):
+            await c.get("labs")
+    finally:
+        await c.aclose()
+
+
+@respx.mock
+async def test_platform_outage_does_not_fall_back() -> None:
+    respx.post(f"{IL_API}/v1/immersive_auth/sessions").respond(503, text="down")
+    idp = respx.post(IDP).respond(500)
+    c = CreClient(cognito_settings())
+    try:
+        with pytest.raises(CreError, match=r"IL sign-in failed.*503"):
+            await c.get("labs")
+    finally:
+        await c.aclose()
+    assert not idp.called
 
 
 @respx.mock
