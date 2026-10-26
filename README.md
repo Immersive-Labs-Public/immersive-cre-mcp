@@ -49,13 +49,16 @@ Settings are read from environment variables, so set them in your MCP client's c
 
 | Variable | Default | |
 |---|---|---|
-| `IMMERSIVE_CRE_USERNAME` / `IMMERSIVE_CRE_PASSWORD` | – | Immersive Labs platform login (no API tokens exist) |
+| `IMMERSIVE_CRE_USERNAME` / `IMMERSIVE_CRE_PASSWORD` | – | Immersive Labs platform login, or a standalone Cyber Ranges account (no API tokens exist) |
+| `IMMERSIVE_CRE_AUTH` | `auto` | `platform` (Immersive Labs SSO), `cognito` (standalone CRE account, e.g. support) or `auto` (try platform, then standalone) |
 | `IMMERSIVE_CRE_REGION` | `eu` | `eu` (immersivelabs.online) or `us` (us.immersivelabs.com); picks every host below |
 | `IMMERSIVE_CRE_BASE_URL` | region's (`https://api4.eu.snaplabs.io` / `https://api4.snaplabs.io`) | Ranges API host |
 | `IMMERSIVE_CRE_DASHBOARD_URL` | region's (`https://dashboard.immersivelabs.eu.snaplabs.io` / `https://dashboard.immersivelabs.snaplabs.io`) | Used for the OAuth state/referrer |
 | `IMMERSIVE_CRE_IL_URL` / `IMMERSIVE_CRE_IL_API_URL` / `IMMERSIVE_CRE_HYDRA_URL` | region's | Immersive Labs sign-in hosts |
 | `IMMERSIVE_CRE_HYDRA_CLIENT_ID` | region's | Fallback only - the OAuth URL normally comes from the ranges API |
-| `IMMERSIVE_CRE_TOKEN_CACHE` | `~/.cache/immersive-cre-mcp/token` | Session cookie cache (mode 0600; `-us` suffix for the US region); empty = memory only |
+| `IMMERSIVE_CRE_COGNITO_API_URL` | region's (`https://api.eu.snaplabs.io` / `https://api2.snaplabs.io`) | API host for standalone accounts |
+| `IMMERSIVE_CRE_COGNITO_USER_POOL_ID` / `IMMERSIVE_CRE_COGNITO_CLIENT_ID` | region's | Cognito pool the standalone CRE dashboard signs in to |
+| `IMMERSIVE_CRE_TOKEN_CACHE` | `~/.cache/immersive-cre-mcp/token` | Session cache (mode 0600; `-us` suffix for the US region), tied to the username; empty = memory only |
 | `IMMERSIVE_CRE_READ_ONLY` | `false` | Only expose read tools |
 | `IMMERSIVE_CRE_ENABLE_RAW` | `true` | Expose `raw_request` for endpoints without a tool |
 
@@ -192,7 +195,8 @@ subnets, apps, events (write), user management, template create/share/delete, pu
 
 ```
 src/immersive_cre_mcp/
-  client.py      auth (IL → Hydra OAuth → token cookie), GET/POST transport, S3 upload/download
+  client.py      auth (IL → Hydra OAuth → token cookie, or Cognito), GET/POST transport, S3 upload/download
+  cognito.py     Cognito SRP sign-in for standalone CRE accounts
   config.py      settings (environment / .env)
   app.py         MCPServer instance, tool() decorator, shared helpers
   server.py      entry point (immersive-cre-mcp)

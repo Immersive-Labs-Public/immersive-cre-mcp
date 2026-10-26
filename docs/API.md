@@ -8,6 +8,9 @@ To re-extract after a dashboard release, pull the bundle and look for the API ob
 names like `updateScenarioFlags` to helpers (`Be(path)` = GET, `w(path, body)` = POST).
 
 - Auth: `token` cookie from the Immersive Labs → Hydra OAuth flow (see `src/immersive_cre_mcp/client.py`).
+  Standalone CRE accounts (not platform users) sign in to the `dashboard.eu.snaplabs.io` Cognito pool
+  instead and call the same endpoints at `https://api.eu.snaplabs.io/main/<path>` (US: `api2.snaplabs.io`)
+  with the Cognito ID token as the `Authorization` header (see `src/immersive_cre_mcp/cognito.py`).
 - Most responses carry `"result": "success"`, or `"result": "error"` + `message` with HTTP 200.
 - Uploads (`docs/update`) return `{UrlData: {url, fields}, ID}`, a pre-signed S3 POST. The file is
   posted as multipart `fields` + `file`. Markdown is registered asynchronously (~5s).
