@@ -1,14 +1,14 @@
 # immersive-cre-mcp
 
 [![CI](https://github.com/Immersive-Labs-Public/immersive-cre-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Immersive-Labs-Public/immersive-cre-mcp/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Immersive-Labs-Public/immersive-cre-mcp/blob/main/LICENSE)
 
 MCP server for **Immersive Labs Cyber Ranges** (CRE), built for **range authors**.
 It covers the whole dashboard: scenarios, flags (with answers), briefing and walkthrough markdown,
 documents, templates, labs, systems, networking, snapshots, VPN, events and users.
 
 > This uses the same public API the CRE web dashboard calls: any registered account can reach
-> it by signing in. It isn't formally documented or versioned (see [docs/API.md](docs/API.md) for
+> it by signing in. It isn't formally documented or versioned (see [docs/API.md](https://github.com/Immersive-Labs-Public/immersive-cre-mcp/blob/main/docs/API.md) for
 > the endpoints as observed), so a dashboard release can change it.
 
 # Installation
@@ -27,8 +27,8 @@ To use a version that isn't on PyPI, install straight from the repository. Add `
 a tag, branch or commit; leave it off to get the latest `main`.
 
 ```bash
-uvx --from git+https://github.com/Immersive-Labs-Public/immersive-cre-mcp@v0.1.0 immersive-cre-mcp
-pipx install git+https://github.com/Immersive-Labs-Public/immersive-cre-mcp@v0.1.0
+uvx --from git+https://github.com/Immersive-Labs-Public/immersive-cre-mcp@v0.3.0 immersive-cre-mcp
+pipx install git+https://github.com/Immersive-Labs-Public/immersive-cre-mcp@v0.3.0
 pip install "immersive-cre-mcp @ git+https://github.com/Immersive-Labs-Public/immersive-cre-mcp@<commit-sha>"
 ```
 
@@ -36,7 +36,7 @@ With `uvx`, pass the same `--from` in your client config (see [Add to a client](
 
 ```json
 "command": "uvx",
-"args": ["--from", "git+https://github.com/Immersive-Labs-Public/immersive-cre-mcp@v0.1.0", "immersive-cre-mcp"]
+"args": ["--from", "git+https://github.com/Immersive-Labs-Public/immersive-cre-mcp@v0.3.0", "immersive-cre-mcp"]
 ```
 
 `uvx` caches the build, so a pinned tag or commit is fetched only once. For a branch, add
@@ -207,4 +207,4 @@ tests/           unit tests (HTTP mocked with respx)
 
 ## License
 
-[MIT](LICENSE)
+[MIT](https://github.com/Immersive-Labs-Public/immersive-cre-mcp/blob/main/LICENSE)

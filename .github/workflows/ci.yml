@@ -55,6 +55,8 @@ jobs:
       - uses: astral-sh/setup-uv@v7
       - name: Build sdist and wheel
         run: uv build
+      - name: Check metadata
+        run: uvx twine check --strict dist/*
       - name: Check the wheel installs and starts
         run: |
           uv venv /tmp/smoke
