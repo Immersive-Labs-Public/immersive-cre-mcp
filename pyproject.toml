@@ -1,12 +1,12 @@
 [project]
 name = "immersive-cre-mcp"
-version = "0.1.0"
+version = "0.3.0"
 description = "MCP server for Immersive Labs Cyber Ranges"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [
-    { name = "kevthehermit", email = "kevthehermit@gmail.com" }
+    { name = "kevthehermit", email = "kevin@immersivelabs.com" }
 ]
 keywords = ["mcp", "model-context-protocol", "immersive-labs", "cyber-range", "llm"]
 classifiers = [
