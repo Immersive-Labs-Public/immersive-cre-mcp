@@ -29,9 +29,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/immersive-labs-innovation/immersive-cre-mcp"
-Repository = "https://github.com/immersive-labs-innovation/immersive-cre-mcp"
-Issues = "https://github.com/immersive-labs-innovation/immersive-cre-mcp/issues"
+Homepage = "https://github.com/Immersive-Labs-Public/immersive-cre-mcp"
+Repository = "https://github.com/Immersive-Labs-Public/immersive-cre-mcp"
+Issues = "https://github.com/Immersive-Labs-Public/immersive-cre-mcp/issues"
 
 [project.scripts]
 immersive-cre-mcp = "immersive_cre_mcp.server:main"

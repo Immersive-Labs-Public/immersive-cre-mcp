@@ -1,0 +1,66 @@
+name: Bug report
+description: A tool fails, returns the wrong data, or sign-in doesn't work
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. **Don't paste passwords, tokens, cookies or flag answers** -
+        redact them from logs and responses before submitting.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what you got instead.
+    validations:
+      required: true
+  - type: input
+    id: tool
+    attributes:
+      label: Tool
+      description: The MCP tool involved, if any (e.g. `list_scenarios`, `raw_request`).
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error output
+      description: The tool error or server log. Redact anything sensitive.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Package version or git ref (`pip show immersive-cre-mcp`, or the `@ref` you installed).
+    validations:
+      required: true
+  - type: dropdown
+    id: region
+    attributes:
+      label: Region
+      options:
+        - eu
+        - us
+    validations:
+      required: true
+  - type: dropdown
+    id: auth
+    attributes:
+      label: Account type
+      description: The `IMMERSIVE_CRE_AUTH` mode you use.
+      options:
+        - platform (Immersive Labs SSO)
+        - cognito (standalone CRE account)
+        - auto
+    validations:
+      required: true
+  - type: input
+    id: client
+    attributes:
+      label: MCP client
+      description: e.g. Claude Code, Claude Desktop, MCP Inspector.
+  - type: checkboxes
+    id: dashboard
+    attributes:
+      label: Dashboard check
+      description: The API isn't versioned, so a dashboard release can change it.
+      options:
+        - label: The same action still works in the CRE web dashboard
