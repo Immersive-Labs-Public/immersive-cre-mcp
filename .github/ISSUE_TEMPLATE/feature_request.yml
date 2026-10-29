@@ -1,0 +1,30 @@
+name: Feature or tool request
+description: Suggest a new tool, cover a dashboard feature, or improve an existing one
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What do you want to do?
+      description: The range-authoring task you're trying to get done, and what's missing today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: A new tool, new parameters, different output, etc.
+  - type: textarea
+    id: endpoint
+    attributes:
+      label: API endpoint
+      description: |
+        If the dashboard already does this, the request it makes (method and path from your
+        browser's network tab). Redact tokens and IDs you don't want public.
+      render: text
+  - type: checkboxes
+    id: workaround
+    attributes:
+      label: Workaround
+      options:
+        - label: I can do this today with `raw_request`

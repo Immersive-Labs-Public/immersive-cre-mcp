@@ -1,6 +1,6 @@
 # immersive-cre-mcp
 
-[![CI](https://github.com/immersive-labs-innovation/immersive-cre-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/immersive-labs-innovation/immersive-cre-mcp/actions/workflows/ci.yml)
+[![CI](https://github.com/Immersive-Labs-Public/immersive-cre-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Immersive-Labs-Public/immersive-cre-mcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 MCP server for **Immersive Labs Cyber Ranges** (CRE), built for **range authors**.
@@ -27,16 +27,16 @@ To use a version that isn't on PyPI, install straight from the repository. Add `
 a tag, branch or commit; leave it off to get the latest `main`.
 
 ```bash
-uvx --from git+https://github.com/immersive-labs-innovation/immersive-cre-mcp@v0.1.0 immersive-cre-mcp
-pipx install git+https://github.com/immersive-labs-innovation/immersive-cre-mcp@v0.1.0
-pip install "immersive-cre-mcp @ git+https://github.com/immersive-labs-innovation/immersive-cre-mcp@<commit-sha>"
+uvx --from git+https://github.com/Immersive-Labs-Public/immersive-cre-mcp@v0.1.0 immersive-cre-mcp
+pipx install git+https://github.com/Immersive-Labs-Public/immersive-cre-mcp@v0.1.0
+pip install "immersive-cre-mcp @ git+https://github.com/Immersive-Labs-Public/immersive-cre-mcp@<commit-sha>"
 ```
 
 With `uvx`, pass the same `--from` in your client config (see [Add to a client](#add-to-a-client)):
 
 ```json
 "command": "uvx",
-"args": ["--from", "git+https://github.com/immersive-labs-innovation/immersive-cre-mcp@v0.1.0", "immersive-cre-mcp"]
+"args": ["--from", "git+https://github.com/Immersive-Labs-Public/immersive-cre-mcp@v0.1.0", "immersive-cre-mcp"]
 ```
 
 `uvx` caches the build, so a pinned tag or commit is fetched only once. For a branch, add
@@ -148,7 +148,7 @@ Authoring notes:
 Requires [uv](https://docs.astral.sh/uv/).
 
 ```bash
-git clone https://github.com/immersive-labs-innovation/immersive-cre-mcp.git
+git clone https://github.com/Immersive-Labs-Public/immersive-cre-mcp.git
 cd immersive-cre-mcp
 uv sync
 cp .env.example .env   # then fill in credentials
