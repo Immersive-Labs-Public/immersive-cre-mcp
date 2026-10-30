@@ -47,7 +47,7 @@ body:
       label: Account type
       description: The `IMMERSIVE_CRE_AUTH` mode you use.
       options:
-        - platform (Immersive Labs SSO)
+        - platform (immersive SSO)
         - cognito (standalone CRE account)
         - auto
     validations:

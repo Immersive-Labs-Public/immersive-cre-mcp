@@ -1,7 +1,7 @@
 # Immersive CRE MCP: Product Overview
 
 ## What it is
-An MCP server that connects any AI assistant (Claude Code, Claude Desktop, Cursor, VS Code) to **Immersive Labs Cyber Ranges**. It covers everything the CRE dashboard can do (88 tools), and it also gives an agent what it needs to **get inside the range**: a VPN into the lab network, the lab's SSH key, the system logins and the platform's playbooks.
+An MCP server that connects any AI assistant (Claude Code, Claude Desktop, Cursor, VS Code) to **immersive Cyber Ranges**. It covers everything the CRE dashboard can do (88 tools), and it also gives an agent what it needs to **get inside the range**: a VPN into the lab network, the lab's SSH key, the system logins and the platform's playbooks.
 
 So an agent doesn't just draw the network. It can log on to the machines it built, install and configure software, set up the vulnerable services and hidden evidence, check that the exercise works, and then save the finished environment as a reusable template.
 

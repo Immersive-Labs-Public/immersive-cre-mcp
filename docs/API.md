@@ -7,7 +7,7 @@ or versioned. This reference was compiled from the calls the CRE dashboard
 To re-extract after a dashboard release, pull the bundle and look for the API object that maps
 names like `updateScenarioFlags` to helpers (`Be(path)` = GET, `w(path, body)` = POST).
 
-- Auth: `token` cookie from the Immersive Labs → Hydra OAuth flow (see `src/immersive_cre_mcp/client.py`).
+- Auth: `token` cookie from the immersive → Hydra OAuth flow (see `src/immersive_cre_mcp/client.py`).
   Standalone CRE accounts (not platform users) sign in to the `dashboard.eu.snaplabs.io` Cognito pool
   instead and call the same endpoints at `https://api.eu.snaplabs.io/main/<path>` (US: `api2.snaplabs.io`)
   with the Cognito ID token as the `Authorization` header (see `src/immersive_cre_mcp/cognito.py`).

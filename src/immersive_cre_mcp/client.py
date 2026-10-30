@@ -1,4 +1,4 @@
-"""Async transport for the Immersive Labs Cyber Ranges (CRE) API.
+"""Async transport for the immersive Cyber Ranges (CRE) API.
 
 This is the public API the CRE web dashboard calls (any registered account can
 use it), but it isn't formally documented or versioned - see docs/API.md. The dashboard's
@@ -11,7 +11,7 @@ platform, then cognito if the platform rejects the credentials):
 - cognito: standalone CRE accounts (e.g. support) sign in to an AWS Cognito pool
   (see cognito.py) and send the ID token as `Authorization` to <cognito API>/main/<path>,
   the same API under another host and prefix.
-- platform: Immersive Labs users. We walk the platform login through the
+- platform: immersive users. We walk the platform login through the
   ORY Hydra OAuth flow, which ends with a `token` cookie on the CRE API host.
 
 Every host is regional (EU/US) - see config.REGIONS. The platform chain:
@@ -59,7 +59,7 @@ class CreError(ToolError):
 
 
 class SignInRejected(CreError):
-    """The Immersive Labs platform turned the credentials down (in auto mode, try Cognito)."""
+    """The immersive platform turned the credentials down (in auto mode, try Cognito)."""
 
 
 class CreClient:

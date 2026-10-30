@@ -1,1 +1,1 @@
-"""Immersive Labs Cyber Ranges MCP server."""
+"""immersive Cyber Ranges MCP server."""

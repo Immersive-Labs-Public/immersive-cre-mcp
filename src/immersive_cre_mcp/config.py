@@ -10,9 +10,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # Project-root .env (for editable installs launched from any cwd), then ./.env.
 _PROJECT_ENV = Path(__file__).resolve().parents[2] / ".env"
 
-# Per-region hosts. CRE (ranges API + dashboard) and the Immersive Labs platform that
+# Per-region hosts. CRE (ranges API + dashboard) and the immersive platform that
 # signs you in (IL web app, its API, and the ORY Hydra OAuth server) are both regional.
-# Accounts that aren't Immersive Labs platform users (e.g. support accounts) sign in to the
+# Accounts that aren't immersive platform users (e.g. support accounts) sign in to the
 # standalone CRE dashboard instead: an AWS Cognito user pool, and the same API under /main.
 REGIONS: dict[str, dict[str, str]] = {
     "eu": {
@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     immersive_cre_cognito_api_url: str = ""
     immersive_cre_cognito_user_pool_id: str = ""
     immersive_cre_cognito_client_id: str = ""
-    # platform = Immersive Labs login (Hydra OAuth); cognito = standalone CRE account;
+    # platform = immersive login (Hydra OAuth); cognito = standalone CRE account;
     # auto = try platform, fall back to cognito if the platform rejects the credentials.
     immersive_cre_auth: Literal["auto", "platform", "cognito"] = "auto"
     immersive_cre_username: str = ""

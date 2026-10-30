@@ -15,7 +15,7 @@ from .client import CreClient, CreError
 from .config import settings
 
 INSTRUCTIONS = """\
-Immersive Labs Cyber Ranges (CRE) - authoring and operations.
+immersive Cyber Ranges (CRE) - authoring and operations.
 
 Concepts:
 - Scenario: a catalogued exercise (offensive/defensive) with flags ("tasks"), a participant briefing

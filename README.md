@@ -3,9 +3,14 @@
 [![CI](https://github.com/Immersive-Labs-Public/immersive-cre-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Immersive-Labs-Public/immersive-cre-mcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Immersive-Labs-Public/immersive-cre-mcp/blob/main/LICENSE)
 
-MCP server for **Immersive Labs Cyber Ranges** (CRE), built for **range authors**.
+MCP server for **immersive Cyber Ranges** (CRE), built for **range authors**.
 It covers the whole dashboard: scenarios, flags (with answers), briefing and walkthrough markdown,
 documents, templates, labs, systems, networking, snapshots, VPN, events and users.
+
+> **Open source and self-service.** This project is provided as-is and supported by its community.
+> Bug reports, feature ideas and pull requests are all welcome: open an
+> [issue](https://github.com/Immersive-Labs-Public/immersive-cre-mcp/issues) or send a
+> [pull request](https://github.com/Immersive-Labs-Public/immersive-cre-mcp/pulls).
 
 > This uses the same public API the CRE web dashboard calls: any registered account can reach
 > it by signing in. It isn't formally documented or versioned (see [docs/API.md](https://github.com/Immersive-Labs-Public/immersive-cre-mcp/blob/main/docs/API.md) for
@@ -49,12 +54,12 @@ Settings are read from environment variables, so set them in your MCP client's c
 
 | Variable | Default | |
 |---|---|---|
-| `IMMERSIVE_CRE_USERNAME` / `IMMERSIVE_CRE_PASSWORD` | – | Immersive Labs platform login, or a standalone Cyber Ranges account (no API tokens exist) |
-| `IMMERSIVE_CRE_AUTH` | `auto` | `platform` (Immersive Labs SSO), `cognito` (standalone CRE account, e.g. support) or `auto` (try platform, then standalone) |
+| `IMMERSIVE_CRE_USERNAME` / `IMMERSIVE_CRE_PASSWORD` | – | immersive platform login, or a standalone Cyber Ranges account (no API tokens exist) |
+| `IMMERSIVE_CRE_AUTH` | `auto` | `platform` (immersive SSO), `cognito` (standalone CRE account, e.g. support) or `auto` (try platform, then standalone) |
 | `IMMERSIVE_CRE_REGION` | `eu` | `eu` (immersivelabs.online) or `us` (us.immersivelabs.com); picks every host below |
 | `IMMERSIVE_CRE_BASE_URL` | region's (`https://api4.eu.snaplabs.io` / `https://api4.snaplabs.io`) | Ranges API host |
 | `IMMERSIVE_CRE_DASHBOARD_URL` | region's (`https://dashboard.immersivelabs.eu.snaplabs.io` / `https://dashboard.immersivelabs.snaplabs.io`) | Used for the OAuth state/referrer |
-| `IMMERSIVE_CRE_IL_URL` / `IMMERSIVE_CRE_IL_API_URL` / `IMMERSIVE_CRE_HYDRA_URL` | region's | Immersive Labs sign-in hosts |
+| `IMMERSIVE_CRE_IL_URL` / `IMMERSIVE_CRE_IL_API_URL` / `IMMERSIVE_CRE_HYDRA_URL` | region's | immersive sign-in hosts |
 | `IMMERSIVE_CRE_HYDRA_CLIENT_ID` | region's | Fallback only - the OAuth URL normally comes from the ranges API |
 | `IMMERSIVE_CRE_COGNITO_API_URL` | region's (`https://api.eu.snaplabs.io` / `https://api2.snaplabs.io`) | API host for standalone accounts |
 | `IMMERSIVE_CRE_COGNITO_USER_POOL_ID` / `IMMERSIVE_CRE_COGNITO_CLIENT_ID` | region's | Cognito pool the standalone CRE dashboard signs in to |
@@ -181,15 +186,6 @@ uv run pytest         # unit tests (add --cov for coverage)
 The unit tests mock all HTTP, so they need no credentials and never reach the live API. They
 ignore your `.env`, and they don't touch the token cache.
 
-## Live API test status
-
-These were exercised against the test account over MCP stdio, using a throwaway scenario that was
-deleted afterwards: all read tools, scenario create/update/delete, every flag operation,
-student/admin markdown write and read, and document upload/list/download/delete.
-
-These are wired to the payloads in the dashboard bundle but have **not been run**, because they
-launch, alter or delete real labs and users: lab launch/power/delete, snapshots, VPN, systems,
-subnets, apps, events (write), user management, template create/share/delete, publishing, and images.
 
 ## Layout
 
