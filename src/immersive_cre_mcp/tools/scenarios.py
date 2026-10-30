@@ -107,13 +107,13 @@ async def update_scenario(
 
 @tool("write")
 async def set_scenario_suggested_labs(ctx: Context, scenario_id: str, lab_ids: list[str]) -> dict[str, Any]:
-    """Set the Immersive Labs labs suggested alongside this scenario (ids from search_immersive_labs)."""
+    """Set the immersive labs suggested alongside this scenario (ids from search_immersive_labs)."""
     return await client(ctx).post("scenarios/update", {"ScenarioId": scenario_id, "SuggestedLabIds": lab_ids})
 
 
 @tool("read")
 async def search_immersive_labs(ctx: Context, search: str) -> dict[str, Any]:
-    """Search the Immersive Labs platform's lab catalogue (for suggested labs)."""
+    """Search the immersive platform's lab catalogue (for suggested labs)."""
     return await client(ctx).post("scenarios/labs", {"searchTerm": search})
 
 

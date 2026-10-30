@@ -1,4 +1,4 @@
-"""AWS Cognito sign-in for standalone CRE accounts (not Immersive Labs platform users).
+"""AWS Cognito sign-in for standalone CRE accounts (not immersive platform users).
 
 The standalone dashboard signs in with amazon-cognito-identity-js, which uses SRP: the password
 never leaves the client, only a proof of it. This mirrors that flow over plain HTTP:
