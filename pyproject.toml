@@ -1,6 +1,6 @@
 [project]
 name = "immersive-cre-mcp"
-version = "0.3.0"
+version = "0.3.1"
 description = "MCP server for immersive Cyber Ranges"
 readme = "README.md"
 license = "MIT"

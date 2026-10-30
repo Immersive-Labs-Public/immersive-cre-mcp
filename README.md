@@ -32,8 +32,8 @@ To use a version that isn't on PyPI, install straight from the repository. Add `
 a tag, branch or commit; leave it off to get the latest `main`.
 
 ```bash
-uvx --from git+https://github.com/Immersive-Labs-Public/immersive-cre-mcp@v0.3.0 immersive-cre-mcp
-pipx install git+https://github.com/Immersive-Labs-Public/immersive-cre-mcp@v0.3.0
+uvx --from git+https://github.com/Immersive-Labs-Public/immersive-cre-mcp@v0.3.1 immersive-cre-mcp
+pipx install git+https://github.com/Immersive-Labs-Public/immersive-cre-mcp@v0.3.1
 pip install "immersive-cre-mcp @ git+https://github.com/Immersive-Labs-Public/immersive-cre-mcp@<commit-sha>"
 ```
 
@@ -41,7 +41,7 @@ With `uvx`, pass the same `--from` in your client config (see [Add to a client](
 
 ```json
 "command": "uvx",
-"args": ["--from", "git+https://github.com/Immersive-Labs-Public/immersive-cre-mcp@v0.3.0", "immersive-cre-mcp"]
+"args": ["--from", "git+https://github.com/Immersive-Labs-Public/immersive-cre-mcp@v0.3.1", "immersive-cre-mcp"]
 ```
 
 `uvx` caches the build, so a pinned tag or commit is fetched only once. For a branch, add
